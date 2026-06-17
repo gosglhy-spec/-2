@@ -1,0 +1,1097 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>작물별 시비처방 자동 생성</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f1;
+      --panel: #ffffff;
+      --panel-soft: #eef4ea;
+      --ink: #172019;
+      --muted: #667063;
+      --line: #d8dfd2;
+      --green: #2f6f48;
+      --green-dark: #1f5635;
+      --amber: #b7791f;
+      --blue: #2f6d8f;
+      --red: #b4453d;
+      --shadow: 0 18px 40px rgba(26, 42, 28, .12);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(47, 111, 72, .10), transparent 320px),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    .shell {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 22px 0 32px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: end;
+      padding: 8px 0 18px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(24px, 3vw, 36px);
+      line-height: 1.15;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 0 13px;
+      background: var(--panel);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+    }
+
+    .btn.primary:hover { background: var(--green-dark); }
+    .btn:hover { border-color: #adbaaa; }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .farm-strip {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      color: #344236;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    input, select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(47, 111, 72, .12);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 4px;
+      background: var(--panel-soft);
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+
+    .segmented button {
+      min-height: 34px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .segmented button.active {
+      background: #fff;
+      color: var(--green-dark);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .prescription-meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8faf6;
+    }
+
+    .meta-item {
+      min-width: 0;
+    }
+
+    .meta-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .meta-item strong {
+      display: block;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: linear-gradient(180deg, #fff, #f7faf5);
+      min-height: 112px;
+    }
+
+    .metric b {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .metric .value {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      font-size: 32px;
+      font-weight: 850;
+      color: var(--green-dark);
+      line-height: 1;
+    }
+
+    .metric .unit {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .metric .delta {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      vertical-align: top;
+    }
+
+    th:first-child, td:first-child { text-align: left; }
+    th { color: #41503f; background: #f6f8f3; font-size: 12px; }
+
+    .split {
+      display: grid;
+      gap: 8px;
+    }
+
+    .note-list {
+      display: grid;
+      gap: 9px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .note {
+      border-left: 4px solid var(--blue);
+      background: #f4f8fa;
+      padding: 10px 11px;
+      border-radius: 0 7px 7px 0;
+      color: #263941;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .note.warn {
+      border-left-color: var(--amber);
+      background: #fff8ea;
+      color: #523713;
+    }
+
+    .note.danger {
+      border-left-color: var(--red);
+      background: #fff1ef;
+      color: #5b2621;
+    }
+
+    .small-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .compact {
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    .source {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    dialog {
+      width: min(620px, calc(100% - 28px));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .28);
+      padding: 0;
+    }
+
+    dialog::backdrop { background: rgba(16, 24, 18, .45); }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #172019;
+      color: #fff;
+      padding: 11px 13px;
+      border-radius: 7px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+      font-size: 13px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      header, .layout, .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100% - 20px, 1440px);
+        padding-top: 12px;
+      }
+
+      .form-grid, .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .farm-strip, .prescription-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-body {
+        padding: 14px;
+      }
+
+      .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .toolbar, .small-actions, dialog, .toast { display: none !important; }
+      .shell { width: 100%; padding: 0; }
+      .panel { box-shadow: none; break-inside: avoid; }
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>작물별 시비처방 자동 생성</h1>
+        <p class="subtitle">면적, 토양검정 값, 비료 성분을 반영해 질소·인산·칼리와 제품별 살포량을 계산합니다.</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="saveBtn" title="현재 입력값 저장"><span class="icon">◎</span>저장</button>
+        <button class="btn" id="csvBtn" title="처방 결과 내려받기"><span class="icon">↓</span>CSV</button>
+        <button class="btn primary" id="printBtn" title="처방서 인쇄"><span class="icon">▣</span>인쇄</button>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>입력</h2>
+          <button class="btn compact" id="customCropBtn" title="작물 기준값 추가"><span class="icon">＋</span>작물</button>
+        </div>
+        <div class="panel-body">
+          <div class="farm-strip">
+            <div class="field">
+              <label for="farmProfile">농가 선택</label>
+              <select id="farmProfile"></select>
+            </div>
+            <button class="btn compact" id="deleteFarmBtn" title="선택 농가 삭제"><span class="icon">－</span>삭제</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="prescriptionDate">처방일</label>
+              <input id="prescriptionDate" type="date">
+            </div>
+            <div class="field">
+              <label for="farmerName">농가명</label>
+              <input id="farmerName" placeholder="예: 김농부">
+            </div>
+            <div class="field full">
+              <label for="farmAddress">농장주소</label>
+              <input id="farmAddress" placeholder="예: 전북 김제시 ○○면 ○○리">
+            </div>
+            <div class="field full">
+              <label for="crop">작물</label>
+              <select id="crop"></select>
+            </div>
+            <div class="field full">
+              <label for="variety">품종</label>
+              <input id="variety" placeholder="예: 신동진, 대추방울토마토, 청양고추">
+            </div>
+
+            <div class="field">
+              <label for="area">면적</label>
+              <input id="area" type="number" min="1" step="1" value="1000">
+            </div>
+            <div class="field">
+              <label for="areaUnit">단위</label>
+              <select id="areaUnit">
+                <option value="sqm">㎡</option>
+                <option value="a">a</option>
+                <option value="tena">10a</option>
+                <option value="ha">ha</option>
+                <option value="pyeong">평</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="ph">pH</label>
+              <input id="ph" type="number" min="3" max="9" step="0.1" value="6.2">
+            </div>
+            <div class="field">
+              <label for="om">유기물(g/kg)</label>
+              <input id="om" type="number" min="0" step="0.1" value="25">
+            </div>
+            <div class="field">
+              <label for="p2o5">유효인산(mg/kg)</label>
+              <input id="p2o5" type="number" min="0" step="1" value="350">
+            </div>
+            <div class="field">
+              <label for="k">치환성 K(cmol+/kg)</label>
+              <input id="k" type="number" min="0" step="0.01" value="0.55">
+            </div>
+            <div class="field">
+              <label for="ec">EC(dS/m)</label>
+              <input id="ec" type="number" min="0" step="0.1" value="1.2">
+            </div>
+            <div class="field">
+              <label for="compost">퇴비(t/10a)</label>
+              <input id="compost" type="number" min="0" step="0.1" value="1.5">
+            </div>
+
+            <div class="field full">
+              <label>토양 비옥도</label>
+              <div class="segmented" id="fertility">
+                <button type="button" data-level="low">낮음</button>
+                <button type="button" data-level="normal" class="active">보통</button>
+                <button type="button" data-level="high">높음</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="nPct">질소비료 N(%)</label>
+              <input id="nPct" type="number" min="1" max="100" step="0.1" value="46">
+            </div>
+            <div class="field">
+              <label for="pPct">인산비료 P₂O₅(%)</label>
+              <input id="pPct" type="number" min="1" max="100" step="0.1" value="20">
+            </div>
+            <div class="field">
+              <label for="kPct">칼리비료 K₂O(%)</label>
+              <input id="kPct" type="number" min="1" max="100" step="0.1" value="60">
+            </div>
+            <div class="field">
+              <label for="splitCount">웃거름 횟수</label>
+              <input id="splitCount" type="number" min="0" max="8" step="1" value="2">
+            </div>
+          </div>
+
+          <p class="source">기본값은 프로그램 내 예시 기준입니다. 실제 출하용 처방은 지역 농업기술센터 또는 흙토람 토양검정 결과의 기준값으로 조정하세요.</p>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>처방 결과</h2>
+          <span class="hint" id="areaLabel">기준 면적: 10a</span>
+        </div>
+        <div class="panel-body">
+          <div class="prescription-meta">
+            <div class="meta-item"><span>처방일</span><strong id="metaDate">-</strong></div>
+            <div class="meta-item"><span>농가명</span><strong id="metaFarmer">-</strong></div>
+            <div class="meta-item"><span>농장주소</span><strong id="metaAddress">-</strong></div>
+            <div class="meta-item"><span>작물·품종</span><strong id="metaCrop">-</strong></div>
+          </div>
+
+          <div class="result-grid">
+            <article class="metric">
+              <b>질소 N</b>
+              <div class="value"><span id="nNeed">0</span><span class="unit">kg</span></div>
+              <div class="delta" id="nDelta"></div>
+            </article>
+            <article class="metric">
+              <b>인산 P₂O₅</b>
+              <div class="value"><span id="pNeed">0</span><span class="unit">kg</span></div>
+              <div class="delta" id="pDelta"></div>
+            </article>
+            <article class="metric">
+              <b>칼리 K₂O</b>
+              <div class="value"><span id="kNeed">0</span><span class="unit">kg</span></div>
+              <div class="delta" id="kDelta"></div>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <div class="split">
+              <table>
+                <thead>
+                  <tr><th>비료 제품</th><th>필요량</th><th>기준</th></tr>
+                </thead>
+                <tbody id="productRows"></tbody>
+              </table>
+
+              <table>
+                <thead>
+                  <tr><th>살포 시기</th><th>N</th><th>P₂O₅</th><th>K₂O</th></tr>
+                </thead>
+                <tbody id="scheduleRows"></tbody>
+              </table>
+            </div>
+
+            <div class="split">
+              <ul class="note-list" id="notes"></ul>
+              <div class="small-actions">
+                <button class="btn compact" id="copyBtn" title="결과 복사"><span class="icon">□</span>복사</button>
+                <button class="btn compact" id="resetBtn" title="기본값으로 복원"><span class="icon">↺</span>초기화</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="cropDialog">
+    <div class="panel-head">
+      <h2>작물 기준값 추가</h2>
+      <button class="btn compact" id="closeDialog" title="닫기">닫기</button>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="newName">작물명</label>
+          <input id="newName" placeholder="예: 참외">
+        </div>
+        <div class="field">
+          <label for="newN">N kg/10a</label>
+          <input id="newN" type="number" min="0" step="0.1" value="18">
+        </div>
+        <div class="field">
+          <label for="newP">P₂O₅ kg/10a</label>
+          <input id="newP" type="number" min="0" step="0.1" value="10">
+        </div>
+        <div class="field">
+          <label for="newK">K₂O kg/10a</label>
+          <input id="newK" type="number" min="0" step="0.1" value="15">
+        </div>
+        <div class="field">
+          <label for="newGroup">작물군</label>
+          <select id="newGroup">
+            <option value="fruiting">과채류</option>
+            <option value="leafy">엽채류</option>
+            <option value="root">근채류</option>
+            <option value="grain">식량작물</option>
+            <option value="orchard">과수</option>
+          </select>
+        </div>
+      </div>
+      <div class="small-actions">
+        <button class="btn primary" id="addCrop">추가</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const defaultCrops = [
+      { name: "벼", group: "grain", n: 9, p: 4.5, k: 5.7, basalN: .55, basalP: 1, basalK: .70 },
+      { name: "콩", group: "grain", n: 3, p: 3, k: 3.4, basalN: 1, basalP: 1, basalK: 1 },
+      { name: "옥수수", group: "grain", n: 18, p: 15, k: 15, basalN: .45, basalP: 1, basalK: .55 },
+      { name: "감자", group: "root", n: 10, p: 10, k: 12, basalN: .60, basalP: 1, basalK: .70 },
+      { name: "고구마", group: "root", n: 5.5, p: 6.3, k: 15.6, basalN: .70, basalP: 1, basalK: .70 },
+      { name: "고추", group: "fruiting", n: 19, p: 11.2, k: 14.9, basalN: .45, basalP: 1, basalK: .55 },
+      { name: "토마토", group: "fruiting", n: 20.4, p: 10.3, k: 12.2, basalN: .40, basalP: 1, basalK: .50 },
+      { name: "오이", group: "fruiting", n: 19.7, p: 10.3, k: 12.2, basalN: .40, basalP: 1, basalK: .50 },
+      { name: "배추", group: "leafy", n: 32, p: 7.8, k: 19.8, basalN: .45, basalP: 1, basalK: .55 },
+      { name: "상추", group: "leafy", n: 20, p: 8, k: 12, basalN: .50, basalP: 1, basalK: .60 },
+      { name: "양파", group: "root", n: 24, p: 7.7, k: 15.4, basalN: .35, basalP: 1, basalK: .45 },
+      { name: "마늘", group: "root", n: 25, p: 7.7, k: 12.8, basalN: .35, basalP: 1, basalK: .45 },
+      { name: "사과", group: "orchard", n: 12, p: 6, k: 10, basalN: .55, basalP: 1, basalK: .65 },
+      { name: "배", group: "orchard", n: 16, p: 8, k: 12, basalN: .55, basalP: 1, basalK: .65 },
+      { name: "포도", group: "orchard", n: 12, p: 6, k: 10, basalN: .50, basalP: 1, basalK: .60 }
+    ];
+
+    const groupNames = {
+      grain: "식량작물",
+      root: "근채류",
+      fruiting: "과채류",
+      leafy: "엽채류",
+      orchard: "과수"
+    };
+
+    const els = Object.fromEntries([...document.querySelectorAll("[id]")].map(el => [el.id, el]));
+    let crops = loadCrops();
+    let fertility = "normal";
+    let farms = loadFarms();
+    let activeFarmId = "";
+
+    function loadCrops() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("cropPrescriptionCrops") || "[]");
+        return [...defaultCrops, ...saved];
+      } catch {
+        return [...defaultCrops];
+      }
+    }
+
+    function saveCustomCrops() {
+      const custom = crops.filter(c => !defaultCrops.some(d => d.name === c.name));
+      localStorage.setItem("cropPrescriptionCrops", JSON.stringify(custom));
+    }
+
+    function loadFarms() {
+      try {
+        return JSON.parse(localStorage.getItem("cropPrescriptionFarms") || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function saveFarms() {
+      localStorage.setItem("cropPrescriptionFarms", JSON.stringify(farms));
+    }
+
+    function todayText() {
+      const d = new Date();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${d.getFullYear()}-${month}-${day}`;
+    }
+
+    function collectState() {
+      const state = {};
+      document.querySelectorAll("input, select").forEach(el => {
+        if (el.id !== "farmProfile") state[el.id] = el.value;
+      });
+      state.fertility = fertility;
+      return state;
+    }
+
+    function applyState(state) {
+      Object.entries(state || {}).forEach(([id, value]) => {
+        if (id === "fertility") fertility = value;
+        else if (els[id]) els[id].value = value;
+      });
+      document.querySelectorAll("#fertility button").forEach(btn => btn.classList.toggle("active", btn.dataset.level === fertility));
+    }
+
+    function farmLabel(farm) {
+      const name = farm.state?.farmerName?.trim() || "이름 없는 농가";
+      const cropIndex = Number(farm.state?.crop || 0);
+      const cropName = crops[cropIndex]?.name || "작물 미선택";
+      return `${name} · ${cropName}`;
+    }
+
+    function renderFarmOptions() {
+      const options = ['<option value="">새 농가 입력</option>']
+        .concat(farms.map(farm => `<option value="${farm.id}">${farmLabel(farm)}</option>`));
+      els.farmProfile.innerHTML = options.join("");
+      els.farmProfile.value = activeFarmId;
+    }
+
+    function renderCropOptions() {
+      els.crop.innerHTML = crops.map((c, index) =>
+        `<option value="${index}">${c.name} · ${groupNames[c.group] || c.group}</option>`
+      ).join("");
+    }
+
+    function num(id, fallback = 0) {
+      const value = Number(els[id].value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function round(value, digits = 1) {
+      const factor = 10 ** digits;
+      return Math.round(value * factor) / factor;
+    }
+
+    function areaFactor() {
+      const area = Math.max(num("area", 0), 0);
+      const unit = els.areaUnit.value;
+      const sqm = unit === "sqm" ? area : unit === "a" ? area * 100 : unit === "tena" ? area * 1000 : unit === "ha" ? area * 10000 : area * 3.3058;
+      return sqm / 1000;
+    }
+
+    function nutrientAdjustments(crop) {
+      const ph = num("ph", 6.2);
+      const om = num("om", 25);
+      const p = num("p2o5", 350);
+      const k = num("k", .55);
+      const ec = num("ec", 1.2);
+
+      let nFactor = fertility === "low" ? 1.12 : fertility === "high" ? .88 : 1;
+      let pFactor = fertility === "low" ? 1.10 : fertility === "high" ? .85 : 1;
+      let kFactor = fertility === "low" ? 1.10 : fertility === "high" ? .85 : 1;
+
+      if (om < 20) nFactor += .08;
+      if (om > 35) nFactor -= .10;
+      if (p < 250) pFactor += .18;
+      if (p > 550) pFactor -= .28;
+      if (k < .35) kFactor += .18;
+      if (k > .80) kFactor -= .25;
+      if (ec > 2.0 && crop.group !== "orchard") {
+        nFactor -= .08;
+        kFactor -= .08;
+      }
+      if (ph < 5.5 || ph > 7.3) {
+        pFactor += .05;
+      }
+
+      return {
+        n: Math.max(nFactor, .35),
+        p: Math.max(pFactor, .20),
+        k: Math.max(kFactor, .25)
+      };
+    }
+
+    function compostCredit() {
+      const compost = Math.max(num("compost", 0), 0);
+      return {
+        n: compost * 1.2,
+        p: compost * 1.0,
+        k: compost * 1.2
+      };
+    }
+
+    function calculate() {
+      const crop = crops[Number(els.crop.value)] || crops[0];
+      const factor = areaFactor();
+      const adj = nutrientAdjustments(crop);
+      const credit = compostCredit();
+
+      const per10a = {
+        n: Math.max(crop.n * adj.n - credit.n, 0),
+        p: Math.max(crop.p * adj.p - credit.p, 0),
+        k: Math.max(crop.k * adj.k - credit.k, 0)
+      };
+
+      const total = {
+        n: per10a.n * factor,
+        p: per10a.p * factor,
+        k: per10a.k * factor
+      };
+
+      const products = {
+        n: total.n / (Math.max(num("nPct", 46), 1) / 100),
+        p: total.p / (Math.max(num("pPct", 20), 1) / 100),
+        k: total.k / (Math.max(num("kPct", 60), 1) / 100)
+      };
+
+      return { crop, factor, adj, credit, per10a, total, products };
+    }
+
+    function render() {
+      const r = calculate();
+      const farmer = els.farmerName.value.trim() || "-";
+      const address = els.farmAddress.value.trim() || "-";
+      const variety = els.variety.value.trim();
+      const date = els.prescriptionDate.value || todayText();
+
+      els.metaDate.textContent = date;
+      els.metaFarmer.textContent = farmer;
+      els.metaAddress.textContent = address;
+      els.metaCrop.textContent = variety ? `${r.crop.name} · ${variety}` : r.crop.name;
+      els.areaLabel.textContent = `기준 면적: ${round(r.factor, 2)} × 10a`;
+
+      els.nNeed.textContent = round(r.total.n, 1).toLocaleString("ko-KR");
+      els.pNeed.textContent = round(r.total.p, 1).toLocaleString("ko-KR");
+      els.kNeed.textContent = round(r.total.k, 1).toLocaleString("ko-KR");
+
+      els.nDelta.textContent = `기준 ${r.crop.n}kg/10a · 보정 ${Math.round(r.adj.n * 100)}% · 퇴비공제 ${round(r.credit.n)}kg/10a`;
+      els.pDelta.textContent = `기준 ${r.crop.p}kg/10a · 보정 ${Math.round(r.adj.p * 100)}% · 퇴비공제 ${round(r.credit.p)}kg/10a`;
+      els.kDelta.textContent = `기준 ${r.crop.k}kg/10a · 보정 ${Math.round(r.adj.k * 100)}% · 퇴비공제 ${round(r.credit.k)}kg/10a`;
+
+      els.productRows.innerHTML = [
+        ["질소비료", r.products.n, `${num("nPct", 46)}% N`],
+        ["인산비료", r.products.p, `${num("pPct", 20)}% P₂O₅`],
+        ["칼리비료", r.products.k, `${num("kPct", 60)}% K₂O`],
+        ["퇴비", num("compost", 0) * r.factor, "입력량 반영"]
+      ].map(row => `<tr><td>${row[0]}</td><td>${round(row[1], 1).toLocaleString("ko-KR")} kg</td><td>${row[2]}</td></tr>`).join("");
+
+      renderSchedule(r);
+      renderNotes(r);
+    }
+
+    function renderSchedule(r) {
+      const splitCount = Math.max(Math.round(num("splitCount", 2)), 0);
+      const basal = {
+        n: r.total.n * r.crop.basalN,
+        p: r.total.p * r.crop.basalP,
+        k: r.total.k * r.crop.basalK
+      };
+      const top = {
+        n: Math.max(r.total.n - basal.n, 0),
+        p: Math.max(r.total.p - basal.p, 0),
+        k: Math.max(r.total.k - basal.k, 0)
+      };
+
+      const rows = [[
+        "밑거름",
+        basal.n,
+        basal.p,
+        basal.k
+      ]];
+
+      if (splitCount > 0) {
+        for (let i = 1; i <= splitCount; i += 1) {
+          rows.push([`${i}차 웃거름`, top.n / splitCount, top.p / splitCount, top.k / splitCount]);
+        }
+      }
+
+      els.scheduleRows.innerHTML = rows.map(row =>
+        `<tr><td>${row[0]}</td><td>${round(row[1], 1)}</td><td>${round(row[2], 1)}</td><td>${round(row[3], 1)}</td></tr>`
+      ).join("");
+    }
+
+    function renderNotes(r) {
+      const notes = [];
+      const ph = num("ph", 6.2);
+      const ec = num("ec", 1.2);
+      const p = num("p2o5", 350);
+      const k = num("k", .55);
+      const om = num("om", 25);
+
+      if (ph < 5.5) notes.push(["warn", "pH가 낮습니다. 석회질 자재는 작물과 토양검정 기준에 맞춰 별도 산정하세요."]);
+      if (ph > 7.3) notes.push(["warn", "pH가 높습니다. 인산 흡수 저하 가능성이 있어 과다 석회 투입은 피하세요."]);
+      if (ec > 2.0) notes.push(["danger", "염류농도 EC가 높습니다. 관수·배수 관리 후 추비량을 나누어 적용하세요."]);
+      if (p > 550) notes.push(["warn", "유효인산이 높은 편입니다. 인산비료는 계산량보다 더 줄일 수 있습니다."]);
+      if (k > .80) notes.push(["warn", "치환성 칼리가 높은 편입니다. 칼리 과다 시 칼슘·마그네슘 흡수가 흔들릴 수 있습니다."]);
+      if (om < 20) notes.push(["", "유기물이 낮은 편입니다. 완숙퇴비와 녹비작물 활용을 검토하세요."]);
+      if (r.crop.group === "orchard") notes.push(["", "과수는 수령, 착과량, 전정 강도에 따라 질소 요구량 차이가 큽니다."]);
+      notes.push(["", `${r.crop.name} 기준값은 ${r.crop.n}-${r.crop.p}-${r.crop.k}kg/10a(N-P₂O₅-K₂O)로 계산했습니다.`]);
+
+      els.notes.innerHTML = notes.map(([type, text]) =>
+        `<li class="note ${type}">${text}</li>`
+      ).join("");
+    }
+
+    function snapshotText() {
+      const r = calculate();
+      const variety = els.variety.value.trim();
+      return [
+        `처방일: ${els.prescriptionDate.value || todayText()}`,
+        `농가명: ${els.farmerName.value.trim() || "-"}`,
+        `농장주소: ${els.farmAddress.value.trim() || "-"}`,
+        `작물: ${r.crop.name}`,
+        `품종: ${variety || "-"}`,
+        `면적: ${round(r.factor, 2)} × 10a`,
+        `처방량: N ${round(r.total.n, 1)}kg, P₂O₅ ${round(r.total.p, 1)}kg, K₂O ${round(r.total.k, 1)}kg`,
+        `제품량: 질소비료 ${round(r.products.n, 1)}kg, 인산비료 ${round(r.products.p, 1)}kg, 칼리비료 ${round(r.products.k, 1)}kg, 퇴비 ${round(num("compost", 0) * r.factor, 1)}kg`
+      ].join("\n");
+    }
+
+    function saveState() {
+      const state = collectState();
+      localStorage.setItem("cropPrescriptionState", JSON.stringify(state));
+      const id = activeFarmId || `farm-${Date.now()}`;
+      const existing = farms.findIndex(farm => farm.id === id);
+      const farm = { id, updatedAt: new Date().toISOString(), state };
+      if (existing >= 0) farms[existing] = farm;
+      else farms.push(farm);
+      activeFarmId = id;
+      saveFarms();
+      renderFarmOptions();
+      toast("저장했습니다.");
+    }
+
+    function restoreState() {
+      try {
+        const state = JSON.parse(localStorage.getItem("cropPrescriptionState") || "{}");
+        applyState(state);
+      } catch {}
+      if (!els.prescriptionDate.value) els.prescriptionDate.value = todayText();
+    }
+
+    function downloadCsv() {
+      const r = calculate();
+      const rows = [
+        ["항목", "값", "단위"],
+        ["처방일", els.prescriptionDate.value || todayText(), ""],
+        ["농가명", els.farmerName.value.trim() || "-", ""],
+        ["농장주소", els.farmAddress.value.trim() || "-", ""],
+        ["작물", r.crop.name, ""],
+        ["품종", els.variety.value.trim() || "-", ""],
+        ["면적", round(r.factor, 2), "10a"],
+        ["질소 N", round(r.total.n, 1), "kg"],
+        ["인산 P2O5", round(r.total.p, 1), "kg"],
+        ["칼리 K2O", round(r.total.k, 1), "kg"],
+        ["질소비료", round(r.products.n, 1), "kg"],
+        ["인산비료", round(r.products.p, 1), "kg"],
+        ["칼리비료", round(r.products.k, 1), "kg"],
+        ["퇴비", round(num("compost", 0) * r.factor, 1), "kg"]
+      ];
+      const csv = "\ufeff" + rows.map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `시비처방_${r.crop.name}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => els.toast.classList.remove("show"), 1800);
+    }
+
+    renderCropOptions();
+    renderFarmOptions();
+    restoreState();
+    render();
+
+    document.querySelectorAll("input, select").forEach(el => el.addEventListener("input", render));
+    els.fertility.addEventListener("click", event => {
+      const btn = event.target.closest("button[data-level]");
+      if (!btn) return;
+      fertility = btn.dataset.level;
+      document.querySelectorAll("#fertility button").forEach(item => item.classList.toggle("active", item === btn));
+      render();
+    });
+
+    els.saveBtn.addEventListener("click", saveState);
+    els.farmProfile.addEventListener("change", () => {
+      activeFarmId = els.farmProfile.value;
+      const farm = farms.find(item => item.id === activeFarmId);
+      if (farm) {
+        applyState(farm.state);
+      } else {
+        activeFarmId = "";
+        els.farmerName.value = "";
+        els.farmAddress.value = "";
+        els.variety.value = "";
+        els.prescriptionDate.value = todayText();
+      }
+      render();
+    });
+    els.deleteFarmBtn.addEventListener("click", () => {
+      if (!activeFarmId) {
+        toast("삭제할 농가를 선택하세요.");
+        return;
+      }
+      farms = farms.filter(farm => farm.id !== activeFarmId);
+      activeFarmId = "";
+      saveFarms();
+      renderFarmOptions();
+      toast("선택 농가를 삭제했습니다.");
+    });
+    els.printBtn.addEventListener("click", () => window.print());
+    els.csvBtn.addEventListener("click", downloadCsv);
+    els.copyBtn.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(snapshotText());
+      toast("결과를 복사했습니다.");
+    });
+    els.resetBtn.addEventListener("click", () => {
+      localStorage.removeItem("cropPrescriptionState");
+      location.reload();
+    });
+    els.customCropBtn.addEventListener("click", () => els.cropDialog.showModal());
+    els.closeDialog.addEventListener("click", () => els.cropDialog.close());
+    els.addCrop.addEventListener("click", () => {
+      const name = els.newName.value.trim();
+      if (!name) {
+        toast("작물명을 입력하세요.");
+        return;
+      }
+      crops.push({
+        name,
+        group: els.newGroup.value,
+        n: Math.max(num("newN", 0), 0),
+        p: Math.max(num("newP", 0), 0),
+        k: Math.max(num("newK", 0), 0),
+        basalN: .45,
+        basalP: 1,
+        basalK: .55
+      });
+      saveCustomCrops();
+      renderCropOptions();
+      els.crop.value = String(crops.length - 1);
+      els.cropDialog.close();
+      render();
+      toast("작물을 추가했습니다.");
+    });
+  </script>
+</body>
+</html>
